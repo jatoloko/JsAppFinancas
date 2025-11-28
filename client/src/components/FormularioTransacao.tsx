@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Transacao, Categoria, Subcategoria } from '../types';
-import { api } from '../api';
+import { api } from '../services/api';
 import { converterDataParaBrasileiro, converterDataParaISO, aplicarMascaraData } from '../utils';
 
 interface ErrosValidacao {

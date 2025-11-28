@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { api } from './api';
+import { api } from './services/api';
 import { Transacao } from './types';
 import { obterMesAnoAtual } from './utils';
-import Dashboard from './components/Dashboard';
+import Dashboard from './pages/Dashboard';
 import ListaTransacoes from './components/ListaTransacoes';
 import FormularioTransacao from './components/FormularioTransacao';
-import GerenciamentoCategorias from './components/GerenciamentoCategorias';
-import Modal from './components/Modal';
-import ToastContainer from './components/ToastContainer';
+import GerenciamentoCategorias from './pages/GerenciamentoCategorias';
+import Modal from './components/ui/Modal';
+import ToastContainer from './components/ui/ToastContainer';
 import { useToast } from './hooks/useToast';
 
 type Aba = 'dashboard' | 'transacoes' | 'categorias';

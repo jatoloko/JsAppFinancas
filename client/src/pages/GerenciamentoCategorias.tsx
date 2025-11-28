@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { api } from '../services/api';
 import { Categoria, Subcategoria } from '../types';
-import Modal from './Modal';
+import Modal from '../components/ui/Modal';
 import { useToast } from '../hooks/useToast';
 
 export default function GerenciamentoCategorias() {

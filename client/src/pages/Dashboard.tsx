@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api } from '../services/api';
 import { Estatisticas, EstatisticaCategoria } from '../types';
 import { formatarMoeda, calcularPorcentagem } from '../utils';
-import { SkeletonCard } from './Skeleton';
-import GraficoPizza from './GraficoPizza';
-import GraficoBarras from './GraficoBarras';
+import { SkeletonCard } from '../components/ui/Skeleton';
+import GraficoPizza from '../components/GraficoPizza';
+import GraficoBarras from '../components/GraficoBarras';
 
 interface DashboardProps {
   mes: number;
