@@ -1,0 +1,52 @@
+═══════════════════════════════════════════════════════════════
+  📦 APP DE CONTROLE FINANCEIRO - INSTRUÇÕES DE INSTALAÇÃO
+═══════════════════════════════════════════════════════════════
+
+Olá! Este é um aplicativo completo de controle financeiro pessoal.
+
+📋 PRÉ-REQUISITOS:
+  • Node.js instalado (versão 16 ou superior)
+  • npm (vem com o Node.js)
+
+🚀 COMO INSTALAR E EXECUTAR:
+
+1. Extraia a pasta do projeto
+
+2. Abra um terminal (PowerShell, CMD ou Git Bash) na pasta do projeto
+
+3. Instale as dependências do backend:
+   npm install
+
+4. Instale as dependências do frontend:
+   cd client
+   npm install
+   cd ..
+
+5. Execute o aplicativo:
+   npm run dev
+
+6. Abra seu navegador em: http://localhost:5173
+
+✨ PRONTO! O aplicativo estará funcionando!
+
+═══════════════════════════════════════════════════════════════
+
+📱 FUNCIONALIDADES:
+
+  • Dashboard com gráficos e estatísticas
+  • Cadastro de receitas e despesas
+  • Gerenciamento de categorias e subcategorias
+  • Busca e filtros avançados
+  • Agrupamento de transações por data
+  • Indicadores de tendência mensal
+
+═══════════════════════════════════════════════════════════════
+
+💡 DICAS:
+
+  • O banco de dados será criado automaticamente
+  • Você pode executar backend e frontend separadamente se preferir
+  • Consulte o arquivo COMO_USAR.md para mais detalhes
+
+═══════════════════════════════════════════════════════════════
+

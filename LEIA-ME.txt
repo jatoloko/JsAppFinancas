@@ -1,0 +1,52 @@
+═══════════════════════════════════════════════════════════════
+  💰 APP DE CONTROLE FINANCEIRO - VERSÃO STANDALONE
+═══════════════════════════════════════════════════════════════
+
+🎯 COMO USAR (SUPER SIMPLES):
+
+1. Dê um DUPLO CLIQUE no arquivo:
+   
+   📄 INICIAR.bat  (Windows)
+   
+   OU
+   
+   📄 INICIAR.ps1   (Windows PowerShell)
+
+2. Aguarde alguns segundos...
+
+3. O navegador abrirá automaticamente! 🎉
+
+═══════════════════════════════════════════════════════════════
+
+⚠️ IMPORTANTE:
+
+• Você precisa ter o Node.js instalado
+  Baixe em: https://nodejs.org
+
+• Na primeira vez, pode demorar um pouco mais
+  (instala as dependências automaticamente)
+
+• O aplicativo abrirá em: http://localhost:3000
+
+• Para fechar, pressione Ctrl+C no terminal
+
+═══════════════════════════════════════════════════════════════
+
+📱 FUNCIONALIDADES:
+
+✅ Dashboard com gráficos e estatísticas
+✅ Cadastro de receitas e despesas
+✅ Gerenciamento de categorias
+✅ Busca e filtros avançados
+✅ Agrupamento por data
+✅ Indicadores de tendência
+
+═══════════════════════════════════════════════════════════════
+
+💡 DICA:
+
+Se o navegador não abrir automaticamente,
+copie e cole no navegador: http://localhost:3000
+
+═══════════════════════════════════════════════════════════════
+
