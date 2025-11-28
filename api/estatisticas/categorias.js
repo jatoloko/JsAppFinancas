@@ -1,4 +1,4 @@
-import { sql, inicializarBancoDeDados } from '../lib/db.js';
+import { supabase, inicializarBancoDeDados } from '../lib/db.js';
 
 export default async function handler(req, res) {
   // Configurar CORS
@@ -20,66 +20,46 @@ export default async function handler(req, res) {
 
     const { mes, ano, tipo } = req.query;
     
-    let result;
+    let query = supabase.from('transacoes').select('categoria, tipo, valor');
     
-    if (mes && ano && tipo) {
+    if (mes && ano) {
       const mesFormatado = mes.toString().padStart(2, '0');
-      result = await sql`
-        SELECT 
-          categoria,
-          tipo,
-          COALESCE(SUM(valor), 0) as total,
-          COUNT(*) as quantidade
-        FROM transacoes
-        WHERE EXTRACT(MONTH FROM data) = ${parseInt(mesFormatado)}
-        AND EXTRACT(YEAR FROM data) = ${parseInt(ano)}
-        AND tipo = ${tipo}
-        GROUP BY categoria, tipo
-        ORDER BY total DESC
-      `;
-    } else if (mes && ano) {
-      const mesFormatado = mes.toString().padStart(2, '0');
-      result = await sql`
-        SELECT 
-          categoria,
-          tipo,
-          COALESCE(SUM(valor), 0) as total,
-          COUNT(*) as quantidade
-        FROM transacoes
-        WHERE EXTRACT(MONTH FROM data) = ${parseInt(mesFormatado)}
-        AND EXTRACT(YEAR FROM data) = ${parseInt(ano)}
-        GROUP BY categoria, tipo
-        ORDER BY total DESC
-      `;
-    } else if (tipo) {
-      result = await sql`
-        SELECT 
-          categoria,
-          tipo,
-          COALESCE(SUM(valor), 0) as total,
-          COUNT(*) as quantidade
-        FROM transacoes
-        WHERE tipo = ${tipo}
-        GROUP BY categoria, tipo
-        ORDER BY total DESC
-      `;
-    } else {
-      result = await sql`
-        SELECT 
-          categoria,
-          tipo,
-          COALESCE(SUM(valor), 0) as total,
-          COUNT(*) as quantidade
-        FROM transacoes
-        GROUP BY categoria, tipo
-        ORDER BY total DESC
-      `;
+      const inicioMes = `${ano}-${mesFormatado}-01`;
+      const fimMes = `${ano}-${mesFormatado}-31`;
+      
+      query = query.gte('data', inicioMes).lte('data', fimMes);
     }
     
-    return res.status(200).json(result.rows);
+    if (tipo) {
+      query = query.eq('tipo', tipo);
+    }
+    
+    const { data: transacoes, error } = await query;
+    
+    if (error) throw error;
+    
+    // Agrupar por categoria
+    const agrupado = {};
+    (transacoes || []).forEach(t => {
+      const key = `${t.categoria}-${t.tipo}`;
+      if (!agrupado[key]) {
+        agrupado[key] = {
+          categoria: t.categoria,
+          tipo: t.tipo,
+          total: 0,
+          quantidade: 0
+        };
+      }
+      agrupado[key].total += parseFloat(t.valor) || 0;
+      agrupado[key].quantidade++;
+    });
+    
+    // Converter para array e ordenar por total
+    const resultado = Object.values(agrupado).sort((a, b) => b.total - a.total);
+    
+    return res.status(200).json(resultado);
   } catch (error) {
     console.error('Erro:', error);
     return res.status(500).json({ erro: error.message });
   }
 }
-

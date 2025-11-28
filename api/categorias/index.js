@@ -1,4 +1,4 @@
-import { sql, inicializarBancoDeDados } from '../lib/db.js';
+import { supabase, inicializarBancoDeDados } from '../lib/db.js';
 
 export default async function handler(req, res) {
   // Configurar CORS
@@ -17,14 +17,19 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { tipo } = req.query;
       
-      let result;
+      let query = supabase
+        .from('categorias')
+        .select('*')
+        .order('nome', { ascending: true });
+      
       if (tipo) {
-        result = await sql`SELECT * FROM categorias WHERE tipo = ${tipo} ORDER BY nome ASC`;
-      } else {
-        result = await sql`SELECT * FROM categorias ORDER BY nome ASC`;
+        query = query.eq('tipo', tipo);
       }
       
-      return res.status(200).json(result.rows);
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      return res.status(200).json(data || []);
     }
 
     if (req.method === 'POST') {
@@ -38,13 +43,16 @@ export default async function handler(req, res) {
         return res.status(400).json({ erro: 'Tipo deve ser "receita" ou "despesa"' });
       }
       
-      const result = await sql`
-        INSERT INTO categorias (nome, tipo) VALUES (${nome}, ${tipo})
-        RETURNING id
-      `;
+      const { data: result, error } = await supabase
+        .from('categorias')
+        .insert([{ nome, tipo }])
+        .select()
+        .single();
+      
+      if (error) throw error;
       
       return res.status(201).json({ 
-        id: result.rows[0].id,
+        id: result.id,
         nome,
         tipo,
         mensagem: 'Categoria criada com sucesso' 
@@ -57,4 +65,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ erro: error.message });
   }
 }
-

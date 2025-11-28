@@ -1,4 +1,4 @@
-import { sql, inicializarBancoDeDados } from '../lib/db.js';
+import { supabase, inicializarBancoDeDados } from '../lib/db.js';
 
 export default async function handler(req, res) {
   // Configurar CORS
@@ -17,13 +17,20 @@ export default async function handler(req, res) {
     await inicializarBancoDeDados();
 
     if (req.method === 'GET') {
-      const result = await sql`SELECT * FROM transacoes WHERE id = ${id}`;
+      const { data, error } = await supabase
+        .from('transacoes')
+        .select('*')
+        .eq('id', id)
+        .single();
       
-      if (result.rows.length === 0) {
-        return res.status(404).json({ erro: 'Transação não encontrada' });
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return res.status(404).json({ erro: 'Transação não encontrada' });
+        }
+        throw error;
       }
       
-      return res.status(200).json(result.rows[0]);
+      return res.status(200).json(data);
     }
 
     if (req.method === 'PUT') {
@@ -33,14 +40,15 @@ export default async function handler(req, res) {
         return res.status(400).json({ erro: 'Campos obrigatórios faltando' });
       }
       
-      const result = await sql`
-        UPDATE transacoes 
-        SET tipo = ${tipo}, categoria = ${categoria}, valor = ${valor}, 
-            descricao = ${descricao || null}, data = ${data}
-        WHERE id = ${id}
-      `;
+      const { data: result, error } = await supabase
+        .from('transacoes')
+        .update({ tipo, categoria, valor, descricao, data })
+        .eq('id', id)
+        .select();
       
-      if (result.rowCount === 0) {
+      if (error) throw error;
+      
+      if (!result || result.length === 0) {
         return res.status(404).json({ erro: 'Transação não encontrada' });
       }
       
@@ -48,9 +56,15 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'DELETE') {
-      const result = await sql`DELETE FROM transacoes WHERE id = ${id}`;
+      const { data: result, error } = await supabase
+        .from('transacoes')
+        .delete()
+        .eq('id', id)
+        .select();
       
-      if (result.rowCount === 0) {
+      if (error) throw error;
+      
+      if (!result || result.length === 0) {
         return res.status(404).json({ erro: 'Transação não encontrada' });
       }
       
@@ -63,4 +77,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ erro: error.message });
   }
 }
-

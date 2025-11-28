@@ -1,53 +1,39 @@
-import { sql } from '@vercel/postgres';
+import { createClient } from '@supabase/supabase-js';
 
-// Inicializar tabelas do banco de dados
+// Criar cliente Supabase
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('⚠️ Variáveis SUPABASE_URL e SUPABASE_ANON_KEY não configuradas');
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+
+// Inicializar tabelas do banco de dados (executar apenas uma vez via Supabase Dashboard)
 export async function inicializarBancoDeDados() {
+  // Com Supabase, as tabelas devem ser criadas pelo Dashboard ou SQL Editor
+  // Esta função apenas verifica se as categorias padrão existem
   try {
-    // Criar tabela de transações
-    await sql`
-      CREATE TABLE IF NOT EXISTS transacoes (
-        id SERIAL PRIMARY KEY,
-        tipo TEXT NOT NULL,
-        categoria TEXT NOT NULL,
-        valor DECIMAL(10, 2) NOT NULL,
-        descricao TEXT,
-        data DATE NOT NULL,
-        subcategoria_id INTEGER,
-        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    // Criar tabela de categorias
-    await sql`
-      CREATE TABLE IF NOT EXISTS categorias (
-        id SERIAL PRIMARY KEY,
-        nome TEXT NOT NULL,
-        tipo TEXT NOT NULL,
-        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    // Criar tabela de subcategorias
-    await sql`
-      CREATE TABLE IF NOT EXISTS subcategorias (
-        id SERIAL PRIMARY KEY,
-        categoria_id INTEGER NOT NULL REFERENCES categorias(id) ON DELETE CASCADE,
-        nome TEXT NOT NULL,
-        criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    // Verificar se já existem categorias
-    const { rows } = await sql`SELECT COUNT(*) as count FROM categorias`;
+    const { data: categorias, error } = await supabase
+      .from('categorias')
+      .select('id')
+      .limit(1);
     
-    if (parseInt(rows[0].count) === 0) {
+    if (error && error.code === '42P01') {
+      // Tabela não existe - usuário precisa criar via Supabase Dashboard
+      console.log('⚠️ Tabelas não encontradas. Execute o SQL de setup no Supabase.');
+      return { success: false, message: 'Tabelas não criadas' };
+    }
+    
+    if (!categorias || categorias.length === 0) {
       await inserirCategoriasPadrao();
     }
-
+    
     return { success: true };
   } catch (error) {
-    console.error('Erro ao inicializar banco:', error);
-    throw error;
+    console.error('Erro ao verificar banco:', error);
+    return { success: false, error };
   }
 }
 
@@ -60,14 +46,16 @@ async function inserirCategoriasPadrao() {
     'Alimentação', 'Transporte', 'Moradia', 'Saúde', 'Educação', 'Lazer', 'Compras', 'Contas', 'Impostos', 'Outros'
   ];
 
-  for (const nome of categoriasReceita) {
-    await sql`INSERT INTO categorias (nome, tipo) VALUES (${nome}, 'receita')`;
-  }
+  const todasCategorias = [
+    ...categoriasReceita.map(nome => ({ nome, tipo: 'receita' })),
+    ...categoriasDespesa.map(nome => ({ nome, tipo: 'despesa' }))
+  ];
 
-  for (const nome of categoriasDespesa) {
-    await sql`INSERT INTO categorias (nome, tipo) VALUES (${nome}, 'despesa')`;
+  const { error } = await supabase.from('categorias').insert(todasCategorias);
+  
+  if (error) {
+    console.error('Erro ao inserir categorias padrão:', error);
+  } else {
+    console.log('✅ Categorias padrão inseridas');
   }
 }
-
-export { sql };
-

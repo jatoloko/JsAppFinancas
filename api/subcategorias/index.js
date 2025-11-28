@@ -1,4 +1,4 @@
-import { sql, inicializarBancoDeDados } from '../lib/db.js';
+import { supabase, inicializarBancoDeDados } from '../lib/db.js';
 
 export default async function handler(req, res) {
   // Configurar CORS
@@ -17,25 +17,36 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const { categoria_id } = req.query;
       
-      let result;
+      let query = supabase
+        .from('subcategorias')
+        .select(`
+          *,
+          categorias (
+            nome,
+            tipo
+          )
+        `)
+        .order('nome', { ascending: true });
+      
       if (categoria_id) {
-        result = await sql`
-          SELECT s.*, c.nome as categoria_nome, c.tipo as categoria_tipo 
-          FROM subcategorias s 
-          JOIN categorias c ON s.categoria_id = c.id
-          WHERE s.categoria_id = ${categoria_id}
-          ORDER BY s.nome ASC
-        `;
-      } else {
-        result = await sql`
-          SELECT s.*, c.nome as categoria_nome, c.tipo as categoria_tipo 
-          FROM subcategorias s 
-          JOIN categorias c ON s.categoria_id = c.id
-          ORDER BY s.nome ASC
-        `;
+        query = query.eq('categoria_id', categoria_id);
       }
       
-      return res.status(200).json(result.rows);
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      // Formatar resultado para manter compatibilidade
+      const resultado = (data || []).map(item => ({
+        id: item.id,
+        categoria_id: item.categoria_id,
+        nome: item.nome,
+        criado_em: item.criado_em,
+        categoria_nome: item.categorias?.nome,
+        categoria_tipo: item.categorias?.tipo
+      }));
+      
+      return res.status(200).json(resultado);
     }
 
     if (req.method === 'POST') {
@@ -45,13 +56,16 @@ export default async function handler(req, res) {
         return res.status(400).json({ erro: 'Categoria ID e nome são obrigatórios' });
       }
       
-      const result = await sql`
-        INSERT INTO subcategorias (categoria_id, nome) VALUES (${categoria_id}, ${nome})
-        RETURNING id
-      `;
+      const { data: result, error } = await supabase
+        .from('subcategorias')
+        .insert([{ categoria_id, nome }])
+        .select()
+        .single();
+      
+      if (error) throw error;
       
       return res.status(201).json({ 
-        id: result.rows[0].id,
+        id: result.id,
         categoria_id,
         nome,
         mensagem: 'Subcategoria criada com sucesso' 
@@ -64,4 +78,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ erro: error.message });
   }
 }
-

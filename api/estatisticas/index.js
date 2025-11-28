@@ -1,4 +1,4 @@
-import { sql, inicializarBancoDeDados } from '../lib/db.js';
+import { supabase, inicializarBancoDeDados } from '../lib/db.js';
 
 export default async function handler(req, res) {
   // Configurar CORS
@@ -20,29 +20,19 @@ export default async function handler(req, res) {
 
     const { mes, ano } = req.query;
     
-    let result;
+    let query = supabase.from('transacoes').select('tipo, valor');
+    
     if (mes && ano) {
       const mesFormatado = mes.toString().padStart(2, '0');
-      result = await sql`
-        SELECT 
-          tipo,
-          COALESCE(SUM(valor), 0) as total,
-          COUNT(*) as quantidade
-        FROM transacoes
-        WHERE EXTRACT(MONTH FROM data) = ${parseInt(mesFormatado)}
-        AND EXTRACT(YEAR FROM data) = ${parseInt(ano)}
-        GROUP BY tipo
-      `;
-    } else {
-      result = await sql`
-        SELECT 
-          tipo,
-          COALESCE(SUM(valor), 0) as total,
-          COUNT(*) as quantidade
-        FROM transacoes
-        GROUP BY tipo
-      `;
+      const inicioMes = `${ano}-${mesFormatado}-01`;
+      const fimMes = `${ano}-${mesFormatado}-31`;
+      
+      query = query.gte('data', inicioMes).lte('data', fimMes);
     }
+    
+    const { data: transacoes, error } = await query;
+    
+    if (error) throw error;
     
     const estatisticas = {
       receitas: 0,
@@ -52,13 +42,13 @@ export default async function handler(req, res) {
       quantidadeDespesas: 0
     };
     
-    result.rows.forEach(row => {
-      if (row.tipo === 'receita') {
-        estatisticas.receitas = parseFloat(row.total) || 0;
-        estatisticas.quantidadeReceitas = parseInt(row.quantidade) || 0;
-      } else if (row.tipo === 'despesa') {
-        estatisticas.despesas = parseFloat(row.total) || 0;
-        estatisticas.quantidadeDespesas = parseInt(row.quantidade) || 0;
+    (transacoes || []).forEach(t => {
+      if (t.tipo === 'receita') {
+        estatisticas.receitas += parseFloat(t.valor) || 0;
+        estatisticas.quantidadeReceitas++;
+      } else if (t.tipo === 'despesa') {
+        estatisticas.despesas += parseFloat(t.valor) || 0;
+        estatisticas.quantidadeDespesas++;
       }
     });
     
@@ -70,4 +60,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ erro: error.message });
   }
 }
-

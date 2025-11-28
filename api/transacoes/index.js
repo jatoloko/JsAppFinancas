@@ -1,4 +1,4 @@
-import { sql, inicializarBancoDeDados } from '../lib/db.js';
+import { supabase, inicializarBancoDeDados } from '../lib/db.js';
 
 export default async function handler(req, res) {
   // Configurar CORS
@@ -12,26 +12,30 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Garantir que o banco está inicializado
     await inicializarBancoDeDados();
 
     if (req.method === 'GET') {
       const { mes, ano } = req.query;
       
-      let result;
+      let query = supabase
+        .from('transacoes')
+        .select('*')
+        .order('data', { ascending: false })
+        .order('criado_em', { ascending: false });
+      
       if (mes && ano) {
+        // Filtrar por mês e ano
         const mesFormatado = mes.toString().padStart(2, '0');
-        result = await sql`
-          SELECT * FROM transacoes 
-          WHERE EXTRACT(MONTH FROM data) = ${parseInt(mesFormatado)}
-          AND EXTRACT(YEAR FROM data) = ${parseInt(ano)}
-          ORDER BY data DESC, criado_em DESC
-        `;
-      } else {
-        result = await sql`SELECT * FROM transacoes ORDER BY data DESC, criado_em DESC`;
+        const inicioMes = `${ano}-${mesFormatado}-01`;
+        const fimMes = `${ano}-${mesFormatado}-31`;
+        
+        query = query.gte('data', inicioMes).lte('data', fimMes);
       }
       
-      return res.status(200).json(result.rows);
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      return res.status(200).json(data || []);
     }
 
     if (req.method === 'POST') {
@@ -45,14 +49,16 @@ export default async function handler(req, res) {
         return res.status(400).json({ erro: 'Tipo deve ser "receita" ou "despesa"' });
       }
       
-      const result = await sql`
-        INSERT INTO transacoes (tipo, categoria, valor, descricao, data)
-        VALUES (${tipo}, ${categoria}, ${valor}, ${descricao || null}, ${data})
-        RETURNING id
-      `;
+      const { data: result, error } = await supabase
+        .from('transacoes')
+        .insert([{ tipo, categoria, valor, descricao, data }])
+        .select('id')
+        .single();
+      
+      if (error) throw error;
       
       return res.status(201).json({ 
-        id: result.rows[0].id,
+        id: result.id,
         mensagem: 'Transação criada com sucesso' 
       });
     }
@@ -63,4 +69,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ erro: error.message });
   }
 }
-

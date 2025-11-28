@@ -2,7 +2,7 @@
   "name": "financas-api",
   "type": "module",
   "dependencies": {
-    "@vercel/postgres": "^0.10.0"
+    "@supabase/supabase-js": "^2.39.0"
   }
 }
 

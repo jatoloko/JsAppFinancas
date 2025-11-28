@@ -1,4 +1,4 @@
-import { sql, inicializarBancoDeDados } from '../lib/db.js';
+import { supabase, inicializarBancoDeDados } from '../lib/db.js';
 
 export default async function handler(req, res) {
   // Configurar CORS
@@ -17,13 +17,20 @@ export default async function handler(req, res) {
     await inicializarBancoDeDados();
 
     if (req.method === 'GET') {
-      const result = await sql`SELECT * FROM categorias WHERE id = ${id}`;
+      const { data, error } = await supabase
+        .from('categorias')
+        .select('*')
+        .eq('id', id)
+        .single();
       
-      if (result.rows.length === 0) {
-        return res.status(404).json({ erro: 'Categoria não encontrada' });
+      if (error) {
+        if (error.code === 'PGRST116') {
+          return res.status(404).json({ erro: 'Categoria não encontrada' });
+        }
+        throw error;
       }
       
-      return res.status(200).json(result.rows[0]);
+      return res.status(200).json(data);
     }
 
     if (req.method === 'PUT') {
@@ -37,12 +44,15 @@ export default async function handler(req, res) {
         return res.status(400).json({ erro: 'Tipo deve ser "receita" ou "despesa"' });
       }
       
-      const result = await sql`
-        UPDATE categorias SET nome = ${nome}, tipo = ${tipo}
-        WHERE id = ${id}
-      `;
+      const { data: result, error } = await supabase
+        .from('categorias')
+        .update({ nome, tipo })
+        .eq('id', id)
+        .select();
       
-      if (result.rowCount === 0) {
+      if (error) throw error;
+      
+      if (!result || result.length === 0) {
         return res.status(404).json({ erro: 'Categoria não encontrada' });
       }
       
@@ -51,40 +61,51 @@ export default async function handler(req, res) {
 
     if (req.method === 'DELETE') {
       // Verificar se há subcategorias
-      const subcatResult = await sql`SELECT COUNT(*) as count FROM subcategorias WHERE categoria_id = ${id}`;
+      const { data: subcats } = await supabase
+        .from('subcategorias')
+        .select('id')
+        .eq('categoria_id', id);
       
-      if (parseInt(subcatResult.rows[0].count) > 0) {
+      if (subcats && subcats.length > 0) {
         return res.status(400).json({ 
           erro: 'Não é possível deletar categoria com subcategorias associadas',
-          quantidade: subcatResult.rows[0].count
+          quantidade: subcats.length
         });
       }
       
       // Buscar nome da categoria para verificar transações
-      const catResult = await sql`SELECT nome FROM categorias WHERE id = ${id}`;
+      const { data: categoria } = await supabase
+        .from('categorias')
+        .select('nome')
+        .eq('id', id)
+        .single();
       
-      if (catResult.rows.length === 0) {
+      if (!categoria) {
         return res.status(404).json({ erro: 'Categoria não encontrada' });
       }
       
-      const categoriaNome = catResult.rows[0].nome;
-      
       // Verificar transações
-      const transResult = await sql`
-        SELECT COUNT(*) as count FROM transacoes 
-        WHERE categoria = ${categoriaNome} OR categoria LIKE ${categoriaNome + ' > %'}
-      `;
+      const { data: transacoes } = await supabase
+        .from('transacoes')
+        .select('id')
+        .or(`categoria.eq.${categoria.nome},categoria.like.${categoria.nome} > %`);
       
-      if (parseInt(transResult.rows[0].count) > 0) {
+      if (transacoes && transacoes.length > 0) {
         return res.status(400).json({ 
           erro: 'Não é possível deletar categoria com transações associadas',
-          quantidade: transResult.rows[0].count
+          quantidade: transacoes.length
         });
       }
       
-      const result = await sql`DELETE FROM categorias WHERE id = ${id}`;
+      const { data: result, error } = await supabase
+        .from('categorias')
+        .delete()
+        .eq('id', id)
+        .select();
       
-      if (result.rowCount === 0) {
+      if (error) throw error;
+      
+      if (!result || result.length === 0) {
         return res.status(404).json({ erro: 'Categoria não encontrada' });
       }
       
@@ -97,4 +118,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ erro: error.message });
   }
 }
-

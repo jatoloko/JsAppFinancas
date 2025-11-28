@@ -1,4 +1,4 @@
-import { sql, inicializarBancoDeDados } from '../lib/db.js';
+import { supabase, inicializarBancoDeDados } from '../lib/db.js';
 
 export default async function handler(req, res) {
   // Configurar CORS
@@ -35,16 +35,17 @@ export default async function handler(req, res) {
       anoAnterior = anoAtual - 1;
     }
 
-    const result = await sql`
-      SELECT 
-        tipo,
-        COALESCE(SUM(valor), 0) as total,
-        COUNT(*) as quantidade
-      FROM transacoes
-      WHERE EXTRACT(MONTH FROM data) = ${mesAnterior}
-      AND EXTRACT(YEAR FROM data) = ${anoAnterior}
-      GROUP BY tipo
-    `;
+    const mesFormatado = mesAnterior.toString().padStart(2, '0');
+    const inicioMes = `${anoAnterior}-${mesFormatado}-01`;
+    const fimMes = `${anoAnterior}-${mesFormatado}-31`;
+
+    const { data: transacoes, error } = await supabase
+      .from('transacoes')
+      .select('tipo, valor')
+      .gte('data', inicioMes)
+      .lte('data', fimMes);
+    
+    if (error) throw error;
     
     const estatisticas = {
       receitas: 0,
@@ -54,13 +55,13 @@ export default async function handler(req, res) {
       quantidadeDespesas: 0
     };
     
-    result.rows.forEach(row => {
-      if (row.tipo === 'receita') {
-        estatisticas.receitas = parseFloat(row.total) || 0;
-        estatisticas.quantidadeReceitas = parseInt(row.quantidade) || 0;
-      } else if (row.tipo === 'despesa') {
-        estatisticas.despesas = parseFloat(row.total) || 0;
-        estatisticas.quantidadeDespesas = parseInt(row.quantidade) || 0;
+    (transacoes || []).forEach(t => {
+      if (t.tipo === 'receita') {
+        estatisticas.receitas += parseFloat(t.valor) || 0;
+        estatisticas.quantidadeReceitas++;
+      } else if (t.tipo === 'despesa') {
+        estatisticas.despesas += parseFloat(t.valor) || 0;
+        estatisticas.quantidadeDespesas++;
       }
     });
     
@@ -72,4 +73,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ erro: error.message });
   }
 }
-
