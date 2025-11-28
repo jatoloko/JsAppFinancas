@@ -9,7 +9,9 @@
     "client": "cd client && npm run dev",
     "build": "cd client && npm run build",
     "start": "node server/servidor-standalone.js",
-    "standalone": "node server/servidor-standalone.js"
+    "standalone": "node server/servidor-standalone.js",
+    "vercel-build": "cd client && npm install && npm run build",
+    "setup-db": "node api/setup-db.js"
   },
   "keywords": ["finanças", "controle financeiro", "despesas", "receitas"],
   "author": "",
@@ -18,7 +20,8 @@
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "sqlite3": "^5.1.7",
-    "body-parser": "^1.20.2"
+    "body-parser": "^1.20.2",
+    "@vercel/postgres": "^0.10.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",

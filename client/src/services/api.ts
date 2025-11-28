@@ -1,7 +1,8 @@
 import axios from 'axios';
-import { Transacao, Estatisticas, EstatisticaCategoria, Categoria, Subcategoria } from './types';
+import { Transacao, Estatisticas, EstatisticaCategoria, Categoria, Subcategoria } from '../types';
 
-const API_URL = import.meta.env.PROD ? '/api' : (import.meta.env.MODE === 'production' ? '/api' : 'http://localhost:3001/api');
+// Em produção (Vercel) usa /api, em desenvolvimento usa o servidor local
+const API_URL = '/api';
 
 export const api = {
   // Transações
